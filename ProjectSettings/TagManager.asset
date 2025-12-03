@@ -26,15 +26,15 @@ TagManager:
   - 
   - 
   - Wall
-  - First Person View
-  - Character
-  - Post Processing
-  - Post Processing Weapon
-  - Post Processing Scope
-  - Invisible Wall
-  - Projectile
-  - Interactable
-  - Ground
+  - Player
+  - Object
+  - IgnoreRaycast
+  - FirstPersonView
+  - 
+  - 
+  - 
+  - 
+  - 
   - 
   - 
   - 

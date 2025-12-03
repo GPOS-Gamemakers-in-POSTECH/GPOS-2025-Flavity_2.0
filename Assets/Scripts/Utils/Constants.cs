@@ -5,5 +5,5 @@
 
 public enum GravityDirection
 {
-    SOUTH, EAST, NORTH, WEST
+    SOUTH = 0, WEST = 1, NORTH = 2, EAST = 3
 }

@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class BasicMovement : MonoBehaviour
 {
+    [Header("Input 참조")]
+    [SerializeField] private PlayerInputHandler inputHandler;
+
     [Header("이동 설정")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float sprintSpeed = 8f;
@@ -15,7 +18,7 @@ public class BasicMovement : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
 
     [Header("마우스 시점 설정")]
-    [SerializeField] private float mouseSensitivity = 2f;
+    [SerializeField] private float mouseSensitivity = 0.1f;
     [SerializeField] private float maxLookAngle = 90f;
 
     [Header("카메라")]
@@ -23,152 +26,188 @@ public class BasicMovement : MonoBehaviour
 
     private Rigidbody rb;
     private float xRotation = 0f;
-    private float yRotation = 0f;
-    private float zRotation = 0f;
+
+    private GravityDirection CurrentGravity => GravitySwitcher.Instance.CurrentGravityDirection;
 
     private bool isGrounded;
     private bool isJumping;
     private float jumpTimeCounter;
 
-    // viewState: 0 = Default, 1 = Left, 2 = UpDown, 3 = Right
-    private enum ViewState { Default = 0, Left = 1, UpDown = 2, Right = 3 }
-    private ViewState viewState = ViewState.Default;
+    // --- 내부 캐싱 변수 (InputHandler와 결합도 낮춤) ---
+    private Vector2 _currentMoveInput;
+    private Vector2 _currentLookInput;
+    private bool _isSprinting;
+    private bool _isJumpHeld;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+        if (inputHandler == null)
+            inputHandler = GetComponent<PlayerInputHandler>();
+    }
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
-
+        rb.freezeRotation = true;
+        rb.useGravity = true;
         Cursor.lockState = CursorLockMode.Locked;
 
-        xRotation = transform.eulerAngles.x;
-        yRotation = transform.eulerAngles.y;
-        zRotation = transform.eulerAngles.z;
-        
-        int state = Mathf.RoundToInt(zRotation / 90f) % 4;
-        if (state < 0) state += 4;
-        viewState = (ViewState)state;
-        zRotation = state * 90f;
+        AlignPlayerToGravity();
+    }
+
+    private void OnEnable()
+    {
+        if (inputHandler != null)
+        {
+            // 값 변경 이벤트 구독
+            inputHandler.OnMove += UpdateMoveInput;
+            inputHandler.OnLook += UpdateLookInput;
+            inputHandler.OnSprint += UpdateSprintState;
+            inputHandler.OnJump += UpdateJumpState;
+
+            // 트리거 이벤트 구독
+            inputHandler.OnJumpTriggered += HandleJumpTriggered;
+            inputHandler.OnPauseTriggered += HandleUnlockCursor;
+            inputHandler.OnGravityChange += ChangeGravityState;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (inputHandler != null)
+        {
+            // 구독 해제
+            inputHandler.OnMove -= UpdateMoveInput;
+            inputHandler.OnLook -= UpdateLookInput;
+            inputHandler.OnSprint -= UpdateSprintState;
+            inputHandler.OnJump -= UpdateJumpState;
+
+            inputHandler.OnJumpTriggered -= HandleJumpTriggered;
+            inputHandler.OnPauseTriggered -= HandleUnlockCursor;
+            inputHandler.OnGravityChange -= ChangeGravityState;
+        }
     }
 
     void Update()
     {
         CheckGround();
-        HandleViewRotation();
-        HandleMovement();
         HandleMouseLook();
+        HandleMovement();
+    }
 
-        if (Input.GetKeyDown(KeyCode.Escape))
+    // --- 이벤트 핸들러 (내부 상태 갱신) ---
+
+    private void UpdateMoveInput(Vector2 input) => _currentMoveInput = input;
+    private void UpdateLookInput(Vector2 input) => _currentLookInput = input;
+    private void UpdateSprintState(bool isSprinting) => _isSprinting = isSprinting;
+    private void UpdateJumpState(bool isHeld)
+    {
+        _isJumpHeld = isHeld;
+        if (!isHeld) isJumping = false; // 버튼 떼면 점프 상승 중단
+    }
+
+    private void HandleJumpTriggered()
+    {
+        if (isGrounded)
         {
-            Cursor.lockState = CursorLockMode.None;
+            isJumping = true;
+            jumpTimeCounter = maxJumpTime;
         }
     }
+
+    private void HandleUnlockCursor()
+    {
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+    private void ChangeGravityState(int directionDelta)
+    {
+        if (GravitySwitcher.Instance == null) return;
+
+        int current = (int)CurrentGravity;
+        int next = (current + directionDelta) % 4;
+        if (next < 0) next += 4;
+
+        GravitySwitcher.Instance.SwitchGravity((GravityDirection)next);
+        AlignPlayerToGravity();
+    }
+
+    // --- 메인 로직 ---
 
     void CheckGround()
     {
         isGrounded = Physics.Raycast(transform.position, -transform.up, groundCheckDistance, groundLayer);
     }
 
+    public void AlignPlayerToGravity()
+    {
+        if (GravitySwitcher.Instance == null) return;
+        // (기존 중력 정렬 로직 유지)
+        float targetZ = 0f;
+        switch (CurrentGravity)
+        {
+            case GravityDirection.SOUTH: targetZ = 0f; break;
+            case GravityDirection.WEST: targetZ = -90f; break;
+            case GravityDirection.NORTH: targetZ = 180f; break;
+            case GravityDirection.EAST: targetZ = 90f; break;
+        }
+        transform.rotation = Quaternion.Euler(0, transform.eulerAngles.y, targetZ);
+    }
+
+    void HandleMouseLook()
+    {
+        float mouseX = _currentLookInput.x * mouseSensitivity;
+        float mouseY = _currentLookInput.y * mouseSensitivity;
+
+        // 1. 좌우 회전 (플레이어 전체 회전)
+        transform.Rotate(Vector3.up * mouseX);
+
+        // 2. 위아래 회전값 계산
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -maxLookAngle, maxLookAngle);
+
+        // 3. (추가된 부분) 계산된 xRotation을 카메라에 적용합니다.
+        if (playerCamera != null)
+        {
+            playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        }
+    }
+
     void HandleMovement()
     {
-        float horizontalInput = 0f;
-        float verticalInput = 0f;
+        Vector3 localMoveDir = new Vector3(_currentMoveInput.x, 0f, _currentMoveInput.y).normalized;
 
-        if (Input.GetKey(KeyCode.W)) verticalInput += 1f;
-        if (Input.GetKey(KeyCode.S)) verticalInput -= 1f;
-        if (Input.GetKey(KeyCode.D)) horizontalInput += 1f;
-        if (Input.GetKey(KeyCode.A)) horizontalInput -= 1f;
+        float currentSpeed = _isSprinting ? sprintSpeed : moveSpeed;
 
-        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : moveSpeed;
+        // 2. 현재 월드 속도를 로컬 속도로 변환합니다.
+        // 이렇게 하면 localVelocity.y는 항상 "캐릭터 기준 수직 속도(중력 방향)"가 됩니다.
+        Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
+        float currentVerticalSpeed = localVelocity.y;
 
-        // Move velocity by key input
-        Vector3 moveDirection = transform.forward * verticalInput + transform.right * horizontalInput;
-        if (moveDirection.sqrMagnitude > 0.0001f) moveDirection.Normalize();
-
-        // Initial horizontal velocity (mainly by gravity)
-        Vector3 targetHorizontalVelocity = moveDirection * currentSpeed;
-
-        Vector3 finalVerticalVelocity;
-
-        // Start jump
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        // 3. 점프 로직 (로컬 Y축 제어)
+        if (isJumping)
         {
-            isJumping = true;
-            jumpTimeCounter = maxJumpTime;
-            finalVerticalVelocity = transform.up * jumpForce;
-        }
-
-        // Holding jump
-        else if (Input.GetKey(KeyCode.Space) && isJumping)
-        {
-            if (jumpTimeCounter > 0)
+            if (_isJumpHeld && jumpTimeCounter > 0)
             {
-                finalVerticalVelocity = transform.up * jumpForce;
+                currentVerticalSpeed = jumpForce;
                 jumpTimeCounter -= Time.deltaTime;
             }
             else
             {
                 isJumping = false;
-                finalVerticalVelocity = GetGravityVelocity();
             }
         }
 
-        // Not jumping
-        else
-        {
-            isJumping = false;
-            finalVerticalVelocity = GetGravityVelocity();
-        }
+        // 4. 최종 로컬 속도 조합
+        // X, Z는 입력값(속력 적용)으로 덮어쓰고, Y(중력/점프)는 유지합니다.
+        Vector3 finalLocalVelocity = new Vector3(
+            localMoveDir.x * currentSpeed,
+            currentVerticalSpeed,
+            localMoveDir.z * currentSpeed
+        );
 
-        rb.linearVelocity = targetHorizontalVelocity + finalVerticalVelocity;
-    }
-
-    Vector3 GetGravityVelocity()
-    {
-        float currentVerticalSpeed = Vector3.Dot(rb.linearVelocity, transform.up);
-        return transform.up * currentVerticalSpeed;
-    }
-
-    void HandleMouseLook()
-    {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
-
-        float normalizedZRotation = zRotation % 360f;
-
-        float adjustedMouseX = mouseX;
-        float adjustedMouseY = mouseY;
-        switch (viewState)
-        {
-            case ViewState.Default:
-                adjustedMouseX = mouseX; adjustedMouseY = mouseY; break;
-            case ViewState.Left:
-                adjustedMouseX = -mouseY; adjustedMouseY = mouseX; break;
-            case ViewState.UpDown:
-                adjustedMouseX = -mouseX; adjustedMouseY = -mouseY; break;
-            case ViewState.Right:
-                adjustedMouseX = mouseY; adjustedMouseY = -mouseX; break;
-        }
-
-        yRotation += adjustedMouseX;
-        xRotation -= adjustedMouseY;
-        xRotation = Mathf.Clamp(xRotation, -maxLookAngle, maxLookAngle);
-
-        transform.rotation = Quaternion.Euler(xRotation, yRotation, zRotation);
-    }
-
-    void HandleViewRotation()
-    {
-        if (Input.GetKeyDown(KeyCode.Q))
-        {
-            int s = ((int)viewState + 3) % 4;
-            viewState = (ViewState)s;
-            zRotation = s * 90f;
-        }
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            int s = ((int)viewState + 1) % 4;
-            viewState = (ViewState)s;
-            zRotation = s * 90f;
-        }
+        // 5. 로컬 속도를 다시 월드 속도로 변환하여 적용
+        // TransformDirection이 현재 캐릭터의 회전(중력 방향)을 반영하여 월드 좌표로 바꿔줍니다.
+        rb.linearVelocity = transform.TransformDirection(finalLocalVelocity);
     }
 }
