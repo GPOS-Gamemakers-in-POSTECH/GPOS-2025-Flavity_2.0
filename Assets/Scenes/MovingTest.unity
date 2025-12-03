@@ -131,7 +131,7 @@ GameObject:
   - component: {fileID: 25988784}
   - component: {fileID: 25988783}
   - component: {fileID: 25988782}
-  m_Layer: 0
+  m_Layer: 17
   m_Name: Plane_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -512,7 +512,7 @@ GameObject:
   - component: {fileID: 619145831}
   - component: {fileID: 619145830}
   - component: {fileID: 619145829}
-  m_Layer: 0
+  m_Layer: 17
   m_Name: Plane_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -670,7 +670,7 @@ GameObject:
   - component: {fileID: 1250427817}
   - component: {fileID: 1250427816}
   - component: {fileID: 1250427815}
-  m_Layer: 0
+  m_Layer: 17
   m_Name: Plane_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -776,7 +776,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1379727448}
-  m_Layer: 0
+  m_Layer: 17
   m_Name: Wall
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -814,7 +814,7 @@ GameObject:
   - component: {fileID: 1488363725}
   - component: {fileID: 1488363724}
   - component: {fileID: 1488363723}
-  m_Layer: 0
+  m_Layer: 17
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1062,8 +1062,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 5
+  sprintSpeed: 8
+  jumpForce: 5
+  maxJumpTime: 0.3
+  groundCheckDistance: 1.1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 131072
   mouseSensitivity: 0.1
   maxLookAngle: 90
+  playerCamera: {fileID: 330585546}
 --- !u!1 &1772317982
 GameObject:
   m_ObjectHideFlags: 0
