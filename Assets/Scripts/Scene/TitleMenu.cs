@@ -4,6 +4,7 @@ using UnityEngine.UI;
 
 public class TitleMenu : MonoBehaviour
 {
+    public GameObject uiImage;
     public GameObject settingPanel;
     public Button startGameButton;
     public Button settingButton;
@@ -18,29 +19,28 @@ public class TitleMenu : MonoBehaviour
     public void OnSettingClick()
     {
         settingPanel.SetActive(true);
+        uiImage.SetActive(false);
     }
 
     public void OnExitGameClick()
     {
-    #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-    #else
+        #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+        #else
             Application.Quit();
-    #endif
+        #endif
     }
 
     public void OnCloseClick()
     {
         settingPanel.SetActive(false);
+        uiImage.SetActive(true);
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        if (settingPanel != null)
-        {
-            settingPanel.SetActive(false);
-        }
+        settingPanel.SetActive(false);
 
         if (startGameButton != null)
             startGameButton.onClick.AddListener(OnStartGameClick);
@@ -63,6 +63,7 @@ public class TitleMenu : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 settingPanel.SetActive(false);
+                uiImage.SetActive(true);
             }
         }
     }
