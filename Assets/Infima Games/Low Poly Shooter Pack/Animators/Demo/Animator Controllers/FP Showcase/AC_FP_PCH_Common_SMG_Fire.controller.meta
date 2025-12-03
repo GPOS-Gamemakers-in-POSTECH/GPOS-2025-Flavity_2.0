@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 3ff395ffe94176546921b38fa0bfa5c5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 54947
+  packageName: Low Poly Shooter Pack v4.3
+  packageVersion: 4.3.1
+  assetPath: Assets/Infima Games/Low Poly Shooter Pack/Animators/Demo/Animator Controllers/FP
+    Showcase/AC_FP_PCH_Common_SMG_Fire.controller
+  uploadId: 556432

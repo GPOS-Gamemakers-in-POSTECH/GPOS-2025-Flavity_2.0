@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d795c38b59a2e9142a1a4a216eadb118
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 54947
+  packageName: Low Poly Shooter Pack v4.3
+  packageVersion: 4.3.1
+  assetPath: Assets/Infima Games/Low Poly Shooter Pack/Animators/Interface/AC_UI_Pickup.controller
+  uploadId: 556432

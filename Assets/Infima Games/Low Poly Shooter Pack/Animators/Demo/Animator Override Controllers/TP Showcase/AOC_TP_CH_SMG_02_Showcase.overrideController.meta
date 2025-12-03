@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5a5140a0eb1197443b3a32e1d63737a3
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 54947
+  packageName: Low Poly Shooter Pack v4.3
+  packageVersion: 4.3.1
+  assetPath: Assets/Infima Games/Low Poly Shooter Pack/Animators/Demo/Animator Override
+    Controllers/TP Showcase/AOC_TP_CH_SMG_02_Showcase.overrideController
+  uploadId: 556432

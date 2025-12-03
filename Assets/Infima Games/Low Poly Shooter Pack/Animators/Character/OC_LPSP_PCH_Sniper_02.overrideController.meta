@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 10f0359b8acaa884f84935b3e29a4327
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 22100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 54947
+  packageName: Low Poly Shooter Pack v4.3
+  packageVersion: 4.3.1
+  assetPath: Assets/Infima Games/Low Poly Shooter Pack/Animators/Character/OC_LPSP_PCH_Sniper_02.overrideController
+  uploadId: 556432
