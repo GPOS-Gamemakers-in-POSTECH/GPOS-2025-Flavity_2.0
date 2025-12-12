@@ -2,38 +2,39 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BasicMovement : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
-    [Header("Input 참조")]
+    [Header("Input Reference")]
     [SerializeField] private PlayerInputHandler inputHandler;
 
-    [Header("이동 설정")]
+    [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float sprintSpeed = 8f;
 
-    [Header("점프 설정")]
+    [Header("Jump Settings")]
     [SerializeField] private float jumpForce = 5f;
     [SerializeField] private float maxJumpTime = 0.3f;
     [SerializeField] private float groundCheckDistance = 1.1f;
     [SerializeField] private LayerMask groundLayer;
 
-    [Header("마우스 시점 설정")]
+    [Header("Look Settings")]
     [SerializeField] private float mouseSensitivity = 0.1f;
     [SerializeField] private float maxLookAngle = 90f;
 
-    [Header("카메라")]
+    [Header("Camera")]
     [SerializeField] private Transform playerCamera;
 
     private Rigidbody rb;
     private float xRotation = 0f;
 
+    // Use singleton instance for Gravity Switcher
     private GravityDirection CurrentGravity => GravitySwitcher.Instance.CurrentGravityDirection;
 
     private bool isGrounded;
     private bool isJumping;
     private float jumpTimeCounter;
 
-    // --- 내부 캐싱 변수 (InputHandler와 결합도 낮춤) ---
+    // --- Internal Cached Variables ---
     private Vector2 _currentMoveInput;
     private Vector2 _currentLookInput;
     private bool _isSprinting;
@@ -59,15 +60,15 @@ public class BasicMovement : MonoBehaviour
     {
         if (inputHandler != null)
         {
-            // 값 변경 이벤트 구독
+            // Subscribe to value change events
             inputHandler.OnMove += UpdateMoveInput;
             inputHandler.OnLook += UpdateLookInput;
             inputHandler.OnSprint += UpdateSprintState;
             inputHandler.OnJump += UpdateJumpState;
 
-            // 트리거 이벤트 구독
+            // Subscribe to trigger events
             inputHandler.OnJumpTriggered += HandleJumpTriggered;
-            inputHandler.OnPauseTriggered += HandleUnlockCursor;
+            // inputHandler.OnPauseTriggered += HandleUnlockCursor; // Handled in InputHandler SetInputMap now
             inputHandler.OnGravityChange += ChangeGravityState;
         }
     }
@@ -76,14 +77,14 @@ public class BasicMovement : MonoBehaviour
     {
         if (inputHandler != null)
         {
-            // 구독 해제
+            // Unsubscribe
             inputHandler.OnMove -= UpdateMoveInput;
             inputHandler.OnLook -= UpdateLookInput;
             inputHandler.OnSprint -= UpdateSprintState;
             inputHandler.OnJump -= UpdateJumpState;
 
             inputHandler.OnJumpTriggered -= HandleJumpTriggered;
-            inputHandler.OnPauseTriggered -= HandleUnlockCursor;
+            // inputHandler.OnPauseTriggered -= HandleUnlockCursor;
             inputHandler.OnGravityChange -= ChangeGravityState;
         }
     }
@@ -95,7 +96,7 @@ public class BasicMovement : MonoBehaviour
         HandleMovement();
     }
 
-    // --- 이벤트 핸들러 (내부 상태 갱신) ---
+    // --- Event Handlers (Internal State Updates) ---
 
     private void UpdateMoveInput(Vector2 input) => _currentMoveInput = input;
     private void UpdateLookInput(Vector2 input) => _currentLookInput = input;
@@ -103,7 +104,7 @@ public class BasicMovement : MonoBehaviour
     private void UpdateJumpState(bool isHeld)
     {
         _isJumpHeld = isHeld;
-        if (!isHeld) isJumping = false; // 버튼 떼면 점프 상승 중단
+        if (!isHeld) isJumping = false; // Stop jump ascent if button released
     }
 
     private void HandleJumpTriggered()
@@ -113,11 +114,6 @@ public class BasicMovement : MonoBehaviour
             isJumping = true;
             jumpTimeCounter = maxJumpTime;
         }
-    }
-
-    private void HandleUnlockCursor()
-    {
-        Cursor.lockState = CursorLockMode.None;
     }
 
     private void ChangeGravityState(int directionDelta)
@@ -132,7 +128,7 @@ public class BasicMovement : MonoBehaviour
         AlignPlayerToGravity();
     }
 
-    // --- 메인 로직 ---
+    // --- Main Logic ---
 
     void CheckGround()
     {
@@ -142,7 +138,7 @@ public class BasicMovement : MonoBehaviour
     public void AlignPlayerToGravity()
     {
         if (GravitySwitcher.Instance == null) return;
-        // (기존 중력 정렬 로직 유지)
+        
         float targetZ = 0f;
         switch (CurrentGravity)
         {
@@ -159,14 +155,13 @@ public class BasicMovement : MonoBehaviour
         float mouseX = _currentLookInput.x * mouseSensitivity;
         float mouseY = _currentLookInput.y * mouseSensitivity;
 
-        // 1. 좌우 회전 (플레이어 전체 회전)
+        // 1. Horizontal Rotation (Player Body)
         transform.Rotate(Vector3.up * mouseX);
 
-        // 2. 위아래 회전값 계산
+        // 2. Vertical Rotation (Camera)
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -maxLookAngle, maxLookAngle);
 
-        // 3. (추가된 부분) 계산된 xRotation을 카메라에 적용합니다.
         if (playerCamera != null)
         {
             playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
@@ -179,12 +174,12 @@ public class BasicMovement : MonoBehaviour
 
         float currentSpeed = _isSprinting ? sprintSpeed : moveSpeed;
 
-        // 2. 현재 월드 속도를 로컬 속도로 변환합니다.
-        // 이렇게 하면 localVelocity.y는 항상 "캐릭터 기준 수직 속도(중력 방향)"가 됩니다.
+        // 2. Convert current world velocity to local velocity
+        // localVelocity.y is always "vertical speed relative to character (gravity)"
         Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
         float currentVerticalSpeed = localVelocity.y;
 
-        // 3. 점프 로직 (로컬 Y축 제어)
+        // 3. Jump Logic (Control Local Y)
         if (isJumping)
         {
             if (_isJumpHeld && jumpTimeCounter > 0)
@@ -198,16 +193,16 @@ public class BasicMovement : MonoBehaviour
             }
         }
 
-        // 4. 최종 로컬 속도 조합
-        // X, Z는 입력값(속력 적용)으로 덮어쓰고, Y(중력/점프)는 유지합니다.
+        // 4. Combine Final Local Velocity
+        // Overwrite X, Z with input (apply speed), keep Y (gravity/jump)
         Vector3 finalLocalVelocity = new Vector3(
             localMoveDir.x * currentSpeed,
             currentVerticalSpeed,
             localMoveDir.z * currentSpeed
         );
 
-        // 5. 로컬 속도를 다시 월드 속도로 변환하여 적용
-        // TransformDirection이 현재 캐릭터의 회전(중력 방향)을 반영하여 월드 좌표로 바꿔줍니다.
+        // 5. Convert Local Velocity back to World Velocity and Apply
+        // TransformDirection applies character rotation (gravity direction) to world coordinates
         rb.linearVelocity = transform.TransformDirection(finalLocalVelocity);
     }
 }
